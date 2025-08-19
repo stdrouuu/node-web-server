@@ -229,11 +229,94 @@
 
 // 5. Response Header -------------------------------------------------------------------------------------
 // header =  tambahan untuk response, misal content type(JSON, HTML, dll), powered-by. bs akses pk response.setHeader
+// const http = require("http");
+
+// const requestListener = (request, response) => {
+//   response.setHeader("Content-Type", "application/json");
+//   response.setHeader("Powered-By", "Node.js");
+// };
+
+// const server = http.createServer(requestListener);
+
+// const port = 5000;
+// const host = "localhost";
+
+// server.listen(port, host, () => {
+//   console.log(`Server berjalan pada http://${host}:${port}`);
+// });
+// to see response, run terminal/cmd: --------------------------------------------------------------------
+// curl -X GET http://localhost:5000 -i ==> output: content-type: application/json, powered-by: Node.js
+
+// 6. Response Body --------------------------------------------------------------------------------------
+// body = data utama yang dikirim server → client.
+// response.write() = tulis sebagian body
+// response.end()   = end & bisa sekaligus tulis body terakhir, response.end nerima string jd hrs pake JSON.stringify
 const http = require("http");
 
 const requestListener = (request, response) => {
   response.setHeader("Content-Type", "application/json");
   response.setHeader("Powered-By", "Node.js");
+
+  const { method, url } = request;
+
+  if (url === "/") {
+    if (method === "GET") {
+      response.statusCode = 200;
+      response.end(
+        JSON.stringify({
+          message: "Ini adalah homepage",
+        })
+      );
+    } else {
+      response.statusCode = 400;
+      response.end(
+        JSON.stringify({
+          message: `Halaman tidak dapat diakses dengan ${method} request`,
+        })
+      );
+    }
+  } else if (url === "/about") {
+    if (method === "GET") {
+      response.statusCode = 200;
+      response.end(
+        JSON.stringify({
+          //response.end nerima string jd hrs pake JSON.stringify
+          message: "Halo! Ini adalah halaman about",
+        })
+      );
+    } else if (method === "POST") {
+      let body = [];
+
+      request.on("data", (chunk) => {
+        body.push(chunk);
+      });
+
+      request.on("end", () => {
+        body = Buffer.concat(body).toString();
+        const { name } = JSON.parse(body);
+        response.statusCode = 200;
+        response.end(
+          JSON.stringify({
+            message: `Halo, ${name}! Ini adalah halaman about`,
+          })
+        );
+      });
+    } else {
+      response.statusCode = 400;
+      response.end(
+        JSON.stringify({
+          message: `Halaman tidak dapat diakses menggunakan ${method}, request`,
+        })
+      );
+    }
+  } else {
+    response.statusCode = 404;
+    response.end(
+      JSON.stringify({
+        message: "Halaman tidak ditemukan!",
+      })
+    );
+  }
 };
 
 const server = http.createServer(requestListener);
@@ -245,4 +328,6 @@ server.listen(port, host, () => {
   console.log(`Server berjalan pada http://${host}:${port}`);
 });
 // to see response, run terminal/cmd: --------------------------------------------------------------------
-// curl -X GET http://localhost:5000 -i ==> output: content-type: application/json, powered-by: Node.js
+// curl -X GET http://localhost:5000/anything ==> output: { "message":"Halaman tidak ditemukan!"}
+// curl -X GET http://localhost:5000/test ==> output: { "message":"Halaman tidak ditemukan!"}
+// curl -X DELETE http://localhost:5000/ ==> output: {"message":"Halaman tidak dapat diakses dengan DELETE request"}
